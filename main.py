@@ -1,99 +1,68 @@
-import flet as ft
 import random
 
+import flet as ft
 
-def secret_santa_derangement(names):
-    """
-    Genera un'estrazione casuale garantendo che
-    nessuno estragga se stesso (disarrangiamento / derangement).
-    """
+
+def secret_santa_derangement(names, exclusions=None):
     if len(names) < 2:
         return {}
-    
-    givers = list(names)
+    exclusions = exclusions or {}
     receivers = list(names)
-    
-    # Tentativi di mescolamento finché nessuno pesca se stesso
-    while True:
-        random.shuffle(receivers)
-        if all(givers[i] != receivers[i] for i in range(len(givers))):
-            return dict(zip(givers, receivers))
+    assignments = {}
+    randomized_givers = list(names)
+    random.shuffle(randomized_givers)
+
+    def assign(index, remaining):
+        if index == len(randomized_givers):
+            return True
+        giver = randomized_givers[index]
+        choices = [
+            receiver
+            for receiver in remaining
+            if receiver != giver and receiver != exclusions.get(giver)
+        ]
+        random.shuffle(choices)
+        for receiver in choices:
+            assignments[giver] = receiver
+            if assign(index + 1, [item for item in remaining if item != receiver]):
+                return True
+            del assignments[giver]
+        return False
+
+    return assignments if assign(0, receivers) else None
 
 
 def main(page: ft.Page):
     page.title = "🎅 Babbo Natale Segreto"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 20
-    page.width = 400
-    page.window_height = 700
     page.scroll = ft.ScrollMode.AUTO
 
     participants = []
+    exclusions = {}
     assignments = {}
     current_revealer_index = 0
 
-    # UI Components - Screen 1 (Inserimento)
     name_input = ft.TextField(
         label="Nome partecipante",
         hint_text="Es. Marco",
         autofocus=True,
         expand=True,
+        on_submit=lambda e: add_participant(e),
     )
-    
     list_column = ft.Column(spacing=8)
     error_banner = ft.Text(color=ft.Colors.RED_600, weight=ft.FontWeight.BOLD)
 
-    def update_participant_list():
-        list_column.controls.clear()
-        for idx, name in enumerate(participants):
-            def make_delete_handler(index):
-                return lambda _: remove_participant(index)
-
-            list_column.controls.append(
-                ft.Container(
-                    content=ft.Row(
-                        [
-                            ft.Icon(ft.Icons.PERSON, color=ft.Colors.RED_400),
-                            ft.Text(name, size=16, weight=ft.FontWeight.W_500, expand=True),
-                            ft.IconButton(
-                                icon=ft.Icons.DELETE_OUTLINE,
-                                icon_color=ft.Colors.RED_400,
-                                on_click=make_delete_handler(idx),
-                            ),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    ),
-                    bgcolor=ft.Colors.RED_50,
-                    padding=10,
-                    border_radius=10,
-                )
-            )
-        page.update()
-
-    def add_participant(e):
-        name = name_input.value.strip()
-        if not name:
-            return
-        if name in participants:
-            error_banner.value = f"'{name}' è già nella lista!"
-            page.update()
-            return
-
-        error_banner.value = ""
-        participants.append(name)
-        name_input.value = ""
-        update_participant_list()
-        name_input.focus()
-
-    def remove_participant(idx):
-        if 0 <= idx < len(participants):
-            participants.pop(idx)
-            update_participant_list()
-
-    # Logica Estrazione e Modalità "Passa il telefono"
-    reveal_title = ft.Text("", size=22, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER)
-    target_card_content = ft.Text("", size=26, weight=ft.FontWeight.BOLD, color=ft.Colors.RED_700, text_align=ft.TextAlign.CENTER)
-    
+    reveal_title = ft.Text(
+        "", size=22, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER
+    )
+    target_card_content = ft.Text(
+        "",
+        size=26,
+        weight=ft.FontWeight.BOLD,
+        color=ft.Colors.RED_700,
+        text_align=ft.TextAlign.CENTER,
+    )
     reveal_box = ft.Container(
         content=target_card_content,
         bgcolor=ft.Colors.RED_100,
@@ -102,15 +71,96 @@ def main(page: ft.Page):
         alignment=ft.Alignment.CENTER,
         visible=False,
     )
-    
-    show_button = ft.FilledButton("🎁 Premi per scoprire a chi devi fare il regalo", style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.RED_600))
-    next_button = ft.FilledButton("Fatto! Passa al prossimo ➡️", visible=False, style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN_700))
+    show_button = ft.FilledButton(
+        "🎁 Premi per scoprire a chi devi fare il regalo",
+        style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.RED_600),
+    )
+    next_button = ft.FilledButton(
+        "Fatto! Passa al prossimo ➡️",
+        visible=False,
+        style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN_700),
+    )
+
+    def update_participant_list():
+        list_column.controls.clear()
+        for giver in participants:
+            options = [
+                ft.dropdown.Option(name)
+                for name in participants
+                if name != giver
+            ]
+            selected = exclusions.get(giver)
+            list_column.controls.append(
+                ft.Container(
+                    content=ft.Column(
+                        [
+                            ft.Row(
+                                [
+                                    ft.Icon(ft.Icons.PERSON, color=ft.Colors.RED_400),
+                                    ft.Text(giver, size=16, expand=True),
+                                    ft.IconButton(
+                                        icon=ft.Icons.DELETE_OUTLINE,
+                                        icon_color=ft.Colors.RED_400,
+                                        tooltip="Rimuovi partecipante",
+                                        on_click=lambda e, person=giver: remove_participant(person),
+                                    ),
+                                ]
+                            ),
+                            ft.Dropdown(
+                                label="Non voglio pescare",
+                                hint_text="Nessuna esclusione",
+                                options=options,
+                                value=selected,
+                                on_change=lambda e, person=giver: set_exclusion(person, e.control.value),
+                                expand=True,
+                            ),
+                        ],
+                        spacing=4,
+                    ),
+                    bgcolor=ft.Colors.RED_50,
+                    padding=10,
+                    border_radius=10,
+                )
+            )
+        page.update()
+
+    def set_exclusion(giver, receiver):
+        exclusions[giver] = receiver
+        error_banner.value = ""
+        page.update()
+
+    def add_participant(e):
+        name = (name_input.value or "").strip()
+        if not name:
+            return
+        if any(existing.casefold() == name.casefold() for existing in participants):
+            error_banner.value = f"'{name}' è già nella lista!"
+            page.update()
+            return
+
+        error_banner.value = ""
+        participants.append(name)
+        exclusions[name] = None
+        name_input.value = ""
+        update_participant_list()
+        name_input.focus()
+
+    def remove_participant(name):
+        if name in participants:
+            participants.remove(name)
+            exclusions.pop(name, None)
+            for giver, excluded in exclusions.items():
+                if excluded == name:
+                    exclusions[giver] = None
+            error_banner.value = ""
+            update_participant_list()
 
     def setup_reveal_step():
-        nonlocal current_revealer_index
         giver = participants[current_revealer_index]
         reveal_title.value = f"📱 Passa il telefono a:\n🎅 {giver}"
-        target_card_content.value = f"Devi fare il regalo a:\n🎄 {assignments[giver]} 🎄"
+        target_card_content.value = (
+            f"Devi fare il regalo a:\n🎄 {assignments[giver]} 🎄"
+        )
         reveal_box.visible = False
         show_button.visible = True
         next_button.visible = False
@@ -139,20 +189,33 @@ def main(page: ft.Page):
             error_banner.value = "Inserisci almeno 3 partecipanti!"
             page.update()
             return
-        
-        assignments = secret_santa_derangement(participants)
+
+        error_banner.value = ""
+        assignments = secret_santa_derangement(participants, exclusions)
+        if assignments is None:
+            error_banner.value = "Le esclusioni impostate non permettono un'estrazione valida. Modifica una o più esclusioni."
+            page.update()
+            return
         current_revealer_index = 0
         setup_reveal_step()
-        
+        page.views.clear()
         page.views.append(
             ft.View(
-                "/reveal",
-                [
-                    ft.AppBar(title=ft.Text("Estrazione Segreta"), bgcolor=ft.Colors.RED_600, color=ft.Colors.WHITE),
+                route="/reveal",
+                appbar=ft.AppBar(
+                    title=ft.Text("Estrazione Segreta"),
+                    bgcolor=ft.Colors.RED_600,
+                    color=ft.Colors.WHITE,
+                ),
+                controls=[
                     ft.Container(
                         content=ft.Column(
                             [
-                                ft.Icon(ft.Icons.CARD_GIFTCARD, size=60, color=ft.Colors.RED_600),
+                                ft.Icon(
+                                    ft.Icons.CARD_GIFTCARD,
+                                    size=60,
+                                    color=ft.Colors.RED_600,
+                                ),
                                 reveal_title,
                                 ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
                                 show_button,
@@ -166,7 +229,7 @@ def main(page: ft.Page):
                         alignment=ft.Alignment.CENTER,
                         expand=True,
                         padding=20,
-                    ),
+                    )
                 ],
             )
         )
@@ -176,16 +239,36 @@ def main(page: ft.Page):
         page.views.clear()
         page.views.append(
             ft.View(
-                "/finish",
-                [
-                    ft.AppBar(title=ft.Text("Finito!"), bgcolor=ft.Colors.GREEN_700, color=ft.Colors.WHITE),
+                route="/finish",
+                appbar=ft.AppBar(
+                    title=ft.Text("Finito!"),
+                    bgcolor=ft.Colors.GREEN_700,
+                    color=ft.Colors.WHITE,
+                ),
+                controls=[
                     ft.Container(
                         content=ft.Column(
                             [
-                                ft.Icon(ft.Icons.CHECK_CIRCLE, size=80, color=ft.Colors.GREEN_600),
-                                ft.Text("Tutti hanno visto il proprio destinatario!", size=22, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
-                                ft.Text("I segreti sono al sicuro. Buono scambio regali! 🎄✨", size=16, text_align=ft.TextAlign.CENTER),
-                                ft.ElevatedButton("Ricomincia da capo", on_click=reset_app),
+                                ft.Icon(
+                                    ft.Icons.CHECK_CIRCLE,
+                                    size=80,
+                                    color=ft.Colors.GREEN_600,
+                                ),
+                                ft.Text(
+                                    "Tutti hanno visto il proprio destinatario!",
+                                    size=22,
+                                    weight=ft.FontWeight.BOLD,
+                                    text_align=ft.TextAlign.CENTER,
+                                ),
+                                ft.Text(
+                                    "I segreti sono al sicuro. Buono scambio regali! 🎄✨",
+                                    size=16,
+                                    text_align=ft.TextAlign.CENTER,
+                                ),
+                                ft.Button(
+                                    content="Ricomincia da capo",
+                                    on_click=reset_app,
+                                ),
                             ],
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                             alignment=ft.MainAxisAlignment.CENTER,
@@ -194,34 +277,40 @@ def main(page: ft.Page):
                         alignment=ft.Alignment.CENTER,
                         expand=True,
                         padding=20,
-                    ),
+                    )
                 ],
             )
         )
         page.update()
 
     def reset_app(e):
-        nonlocal participants, assignments, current_revealer_index
+        nonlocal current_revealer_index
         participants.clear()
+        exclusions.clear()
         assignments.clear()
         current_revealer_index = 0
-        page.views.clear()
+        name_input.value = ""
+        error_banner.value = ""
         render_home()
 
     def render_home():
-        update_participant_list()
+        page.views.clear()
         page.views.append(
             ft.View(
-                "/",
-                [
-                    ft.AppBar(
-                        title=ft.Text("🎅 Babbo Natale Segreto"),
-                        bgcolor=ft.Colors.RED_600,
-                        color=ft.Colors.WHITE,
-                    ),
+                route="/",
+                appbar=ft.AppBar(
+                    title=ft.Text("🎅 Babbo Natale Segreto"),
+                    bgcolor=ft.Colors.RED_600,
+                    color=ft.Colors.WHITE,
+                ),
+                controls=[
                     ft.Column(
                         [
-                            ft.Text("Partecipanti", size=18, weight=ft.FontWeight.BOLD),
+                            ft.Text(
+                                "Partecipanti",
+                                size=18,
+                                weight=ft.FontWeight.BOLD,
+                            ),
                             ft.Row(
                                 [
                                     name_input,
@@ -229,6 +318,7 @@ def main(page: ft.Page):
                                         icon=ft.Icons.ADD_CIRCLE,
                                         icon_size=36,
                                         icon_color=ft.Colors.RED_600,
+                                        tooltip="Aggiungi partecipante",
                                         on_click=add_participant,
                                     ),
                                 ],
@@ -237,8 +327,8 @@ def main(page: ft.Page):
                             ft.Divider(),
                             list_column,
                             ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
-                            ft.ElevatedButton(
-                                "🎁 Avvia Estrazione",
+                            ft.Button(
+                                content="🎁 Avvia Estrazione",
                                 icon=ft.Icons.CASINO,
                                 style=ft.ButtonStyle(
                                     bgcolor=ft.Colors.RED_600,
@@ -250,8 +340,9 @@ def main(page: ft.Page):
                             ),
                         ],
                         expand=True,
-                    ),
+                    )
                 ],
+                scroll=ft.ScrollMode.AUTO,
             )
         )
         page.update()
@@ -260,5 +351,4 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
-    # Nelle versioni recenti di flet (1.x+) si usa ft.run anziché ft.app
     ft.run(main)
