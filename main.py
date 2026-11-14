@@ -111,7 +111,7 @@ def main(page: ft.Page):
                                 hint_text="Nessuna esclusione",
                                 options=options,
                                 value=selected,
-                                on_change=lambda e, person=giver: set_exclusion(person, e.control.value),
+                                on_select=lambda e, person=giver: set_exclusion(person, e.control.value),
                                 expand=True,
                             ),
                         ],
