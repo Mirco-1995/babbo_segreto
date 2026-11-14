@@ -35,8 +35,9 @@ def secret_santa_derangement(names, exclusions=None):
 def main(page: ft.Page):
     page.title = "🎅 Babbo Natale Segreto"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.padding = 20
+    page.padding = 0
     page.scroll = ft.ScrollMode.AUTO
+    page.bgcolor = "#F4F7F2"
 
     participants = []
     exclusions = {}
@@ -53,6 +54,38 @@ def main(page: ft.Page):
     list_column = ft.Column(spacing=8)
     error_banner = ft.Text(color=ft.Colors.RED_600, weight=ft.FontWeight.BOLD)
 
+    def make_header(eyebrow, title, subtitle, icon):
+        return ft.Container(
+            content=ft.Row(
+                [
+                    ft.Container(
+                        content=ft.Icon(icon, size=38, color="#F8E7B0"),
+                        bgcolor="#FFFFFF1A",
+                        padding=15,
+                        border_radius=18,
+                    ),
+                    ft.Column(
+                        [
+                            ft.Text(eyebrow.upper(), size=11, weight=ft.FontWeight.BOLD, color="#E9C879"),
+                            ft.Text(title, size=27, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                            ft.Text(subtitle, size=13, color="#E5E9E2"),
+                        ],
+                        spacing=3,
+                        expand=True,
+                    ),
+                ],
+                spacing=16,
+            ),
+            padding=22,
+            border_radius=24,
+            gradient=ft.LinearGradient(
+                begin=ft.Alignment.TOP_LEFT,
+                end=ft.Alignment.BOTTOM_RIGHT,
+                colors=["#123D35", "#17634C", "#24805B"],
+            ),
+            shadow=ft.BoxShadow(blur_radius=22, color="#173F3526", offset=ft.Offset(0, 8)),
+        )
+
     reveal_title = ft.Text(
         "", size=22, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER
     )
@@ -65,9 +98,11 @@ def main(page: ft.Page):
     )
     reveal_box = ft.Container(
         content=target_card_content,
-        bgcolor=ft.Colors.RED_100,
-        padding=30,
-        border_radius=15,
+        bgcolor="#FFF8E8",
+        padding=32,
+        border_radius=24,
+        border=ft.Border.all(1, "#F0D99B"),
+        shadow=ft.BoxShadow(blur_radius=20, color="#6B4E1720", offset=ft.Offset(0, 6)),
         alignment=ft.Alignment.CENTER,
         visible=False,
     )
@@ -117,9 +152,11 @@ def main(page: ft.Page):
                         ],
                         spacing=4,
                     ),
-                    bgcolor=ft.Colors.RED_50,
-                    padding=10,
-                    border_radius=10,
+                    bgcolor=ft.Colors.WHITE,
+                    padding=14,
+                    border_radius=18,
+                    border=ft.Border.all(1, "#E6ECE5"),
+                    shadow=ft.BoxShadow(blur_radius=9, color="#163D3510", offset=ft.Offset(0, 3)),
                 )
             )
         page.update()
@@ -204,18 +241,14 @@ def main(page: ft.Page):
                 route="/reveal",
                 appbar=ft.AppBar(
                     title=ft.Text("Estrazione Segreta"),
-                    bgcolor=ft.Colors.RED_600,
+                    bgcolor="#123D35",
                     color=ft.Colors.WHITE,
                 ),
                 controls=[
                     ft.Container(
                         content=ft.Column(
                             [
-                                ft.Icon(
-                                    ft.Icons.CARD_GIFTCARD,
-                                    size=60,
-                                    color=ft.Colors.RED_600,
-                                ),
+                                    make_header("Estrazione in corso", "Babbo Segreto", "Passa il telefono e scopri il tuo abbinamento", ft.Icons.CARD_GIFTCARD),
                                 reveal_title,
                                 ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
                                 show_button,
@@ -242,7 +275,7 @@ def main(page: ft.Page):
                 route="/finish",
                 appbar=ft.AppBar(
                     title=ft.Text("Finito!"),
-                    bgcolor=ft.Colors.GREEN_700,
+                    bgcolor="#123D35",
                     color=ft.Colors.WHITE,
                 ),
                 controls=[
@@ -300,17 +333,20 @@ def main(page: ft.Page):
                 route="/",
                 appbar=ft.AppBar(
                     title=ft.Text("🎅 Babbo Natale Segreto"),
-                    bgcolor=ft.Colors.RED_600,
+                    bgcolor="#123D35",
                     color=ft.Colors.WHITE,
                 ),
                 controls=[
                     ft.Column(
                         [
+                            make_header("Edizione Natale", "Babbo Segreto", "La magia dei regali comincia da qui.", ft.Icons.CARD_GIFTCARD),
                             ft.Text(
-                                "Partecipanti",
-                                size=18,
+                                "Crea il tuo gruppo",
+                                size=20,
                                 weight=ft.FontWeight.BOLD,
+                                color="#183B32",
                             ),
+                            ft.Text("Aggiungi tutti e imposta le eventuali esclusioni.", size=13, color="#68776D"),
                             ft.Row(
                                 [
                                     name_input,
@@ -340,9 +376,12 @@ def main(page: ft.Page):
                             ),
                         ],
                         expand=True,
+                        spacing=15,
                     )
                 ],
                 scroll=ft.ScrollMode.AUTO,
+                bgcolor="#F4F7F2",
+                padding=20,
             )
         )
         page.update()
