@@ -24,8 +24,8 @@ def main(page: ft.Page):
     page.title = "🎅 Babbo Natale Segreto"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 20
-    page.window.width = 400
-    page.window.height = 700
+    page.width = 400
+    page.window_height = 700
     page.scroll = ft.ScrollMode.AUTO
 
     participants = []
@@ -99,12 +99,12 @@ def main(page: ft.Page):
         bgcolor=ft.Colors.RED_100,
         padding=30,
         border_radius=15,
-        alignment=ft.alignment.center,
+        alignment=ft.Alignment.CENTER,
         visible=False,
     )
     
-    show_button = ft.ElevatedButton("🎁 Premi per scoprire a chi devi fare il regalo", style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.RED_600))
-    next_button = ft.ElevatedButton("Fatto! Passa al prossimo ➡️", visible=False, style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN_700))
+    show_button = ft.FilledButton("🎁 Premi per scoprire a chi devi fare il regalo", style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.RED_600))
+    next_button = ft.FilledButton("Fatto! Passa al prossimo ➡️", visible=False, style=ft.ButtonStyle(color=ft.Colors.WHITE, bgcolor=ft.Colors.GREEN_700))
 
     def setup_reveal_step():
         nonlocal current_revealer_index
@@ -163,7 +163,7 @@ def main(page: ft.Page):
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                             alignment=ft.MainAxisAlignment.CENTER,
                         ),
-                        alignment=ft.alignment.center,
+                        alignment=ft.Alignment.CENTER,
                         expand=True,
                         padding=20,
                     ),
@@ -191,7 +191,7 @@ def main(page: ft.Page):
                             alignment=ft.MainAxisAlignment.CENTER,
                             spacing=15,
                         ),
-                        alignment=ft.alignment.center,
+                        alignment=ft.Alignment.CENTER,
                         expand=True,
                         padding=20,
                     ),
